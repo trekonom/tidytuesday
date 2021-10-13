@@ -4,12 +4,69 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, fig.width = 10.16 / 2.54, fig.height = 5.334 / 2.54)
+knitr::opts_chunk$set(echo = TRUE, fig.width = 10.2 / 2.54, fig.height = 5.3 / 2.54)
 ```
 
 ```{r}
 library(tidyverse)
 library(ggtext)
+library(patchwork)
+library(showtext)
+```
+
+## Helper
+
+```{r reorder-where}
+reorder_where <- function(x, by, where, fun = mean, ...) {
+    xx <- x[where]
+    byby <- by[where]
+    byby <- tapply(byby, xx, FUN = fun, ...)[x]
+    reorder(x, byby)
+}
+```
+
+## Fonts
+
+```{r fonts}
+## Loading Google fonts (https://fonts.google.com/)
+font_add_google("Lato", "lato")
+font_add_google("Playfair Display", "playfair")
+
+## Automatically use showtext to render text for future devices
+showtext_auto()
+
+showtext_opts(dpi = 300)
+```
+
+```{r theme}
+theme_set(
+  theme_minimal(base_family = "lato") +
+    theme(
+      panel.grid.minor = element_blank(),
+      axis.text = element_text(size = 8.8),
+      axis.text.x = element_text(hjust = c(0, rep(.5, 4), 1)),
+      axis.text.x.top = ggtext::element_markdown(
+        size = 7.4,
+        margin = margin(b = 2.2, t = 8.8, unit = "pt"),
+        hjust = c(1, 0)
+      ),
+      axis.ticks.length = unit(2.75, "pt"),
+      axis.ticks.x = element_line(color = "black", size = .125),
+      axis.ticks.x.top = element_blank(),
+      axis.ticks.length.x.top = unit(0, "pt"),
+      plot.caption = element_markdown(size = 6, hjust = 0, lineheight = 1.2),
+      plot.title = element_text(size = 13.8, family = "playfair"),
+      plot.subtitle = element_text(size = 7.9)
+    )
+)
+```
+
+## Annotations
+
+```{r}
+title <- "Status of the world's fish stocks"
+subtitle <- "Fish stocks are overexploited when fish catch exceeds the maximum sustainable yield (MSY) – the rate at which fish populations can regenerate."
+caption <- "Orignal Data Source: Food and Agriculture Organization of the United Nations **\u2022** Illustration: Stefan Moog **\u2022** recreated from and inspired by ourworldindata.org<br>Note: Fish stock are subpopulations of a particular species of fish which have common parameters such as location, growth and mortality which define their population dynamics."
 ```
 
 ## Read data
@@ -24,7 +81,7 @@ stock <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidy
 # production <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/seafood-and-fish-production-thousand-tonnes.csv")
 ```
 
-```{r}
+```{r stock-world}
 stock_world <- stock %>%
   janitor::clean_names() %>%
   pivot_longer(starts_with("share"), names_to = "status", values_to = "share") %>%
@@ -32,17 +89,7 @@ stock_world <- stock %>%
   filter(entity == "World")
 ```
 
-```{r}
-library(showtext)
-## Loading Google fonts (https://fonts.google.com/)
-font_add_google("Lato", "lato")
-font_add_google("Playfair Display", "playfair")
-
-## Automatically use showtext to render text for future devices
-showtext_auto()
-
-showtext_opts(dpi = 300)
-```
+## Area Chart World
 
 ```{r}
 breaks_x <- c(1974, seq(1980, 2010, 10), 2017)
@@ -51,40 +98,106 @@ pal <- c("#4c6a9c", "#800517")
 labels_y <- unique(stock_world$status)
 labels_y <- glue::glue("<span style='color: {pal}'>{labels_y}<span>")
 
-breaks_y <- filter(stock_world, year == max(year)) %>% 
-  mutate(share1 = .5 * share, share = share1 + lead(share, default = 0)) %>% 
+breaks_y <- filter(stock_world, year == max(year)) %>%
+  mutate(share1 = .5 * share, share = share1 + lead(share, default = 0)) %>%
   pull(share)
-ggplot(stock_world, aes(year, share, fill = status, color = status)) +
+
+(p1 <- ggplot(stock_world, aes(year, share, fill = status, color = status)) +
   geom_area(alpha = .7, size = .1) +
-  scale_x_continuous(expand = c(0, 0), 
-                     breaks = c(1974, seq(1980, 2010, 10), 2017)) +
-  scale_y_continuous(expand = c(0, 0), 
-                     breaks = seq(0, 100, 20),
-                     labels = scales::percent_format(scale = 1),
-                     sec.axis = dup_axis(breaks = breaks_y, labels = labels_y)) +
+  scale_x_continuous(
+    expand = c(0, 0),
+    breaks = c(1974, seq(1980, 2010, 10), 2017)
+  ) +
+  scale_y_continuous(
+    expand = c(0, 0),
+    breaks = seq(0, 100, 20),
+    labels = scales::percent_format(scale = 1),
+    sec.axis = dup_axis(breaks = breaks_y, labels = labels_y)
+  ) +
   scale_fill_manual(values = pal) +
   scale_color_manual(values = pal) +
-  theme_minimal(base_family = "lato") +
-  theme(panel.grid.major.y = element_line(size = .25),
-        panel.grid.major.x = element_blank(), 
-        panel.grid.minor = element_blank(),
-        axis.text.x = element_text(hjust = c(0, rep(.5, length(breaks_x) - 2), 1)),
-        axis.text.y.left = element_text(size = 8.8),
-        axis.text.y.right = ggtext::element_markdown(size = 7.4, margin = margin(r = 40, unit = "pt"), hjust = 0),
-        axis.ticks.length = unit(2.75, "pt"),
-        axis.ticks.x = element_line(color = "black", size = .25),
-        plot.caption = element_markdown(size = 6, hjust = 0, lineheight = 1.2),
-        plot.title = element_text(size = 13.8, family = "playfair"),
-        plot.subtitle = element_text(size = 7.9)) +
-  labs(x = NULL, y = NULL, 
-       title = "Status of the world's fish stocks",
-       subtitle = "Fish stocks are overexploited when fish catch exceeds the maximum sustainable yield (MSY) – the rate at which fish populations can regenerate.",
-       caption = "Orignal Data Source: Food and Agriculture Organization of the United Nations **\u2022** Original Illustration: ourworldindata.org<br>Note: Fish stock are subpopulations of a particular species of fish which have common parameters such as location, growth and mortality which define their population dynamics.") +
+  theme(
+    panel.grid.major.y = element_line(size = .25),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(hjust = c(0, rep(.5, length(breaks_x) - 2), 1)),
+    axis.text.y.right = ggtext::element_markdown(size = 7.4, hjust = 0)
+  ) +
+  labs(x = NULL, y = NULL, title = title, subtitle = subtitle, caption = caption) +
   guides(fill = "none", color = "none") +
-  coord_cartesian(clip = "off")
-  
+  coord_cartesian(clip = "off"))
 ```
 ```{r}
-ggsave("global-fish-stock.png", width = 10.16, height = 5.334, bg = "white", dpi = 300)
+ggsave("global-fish-stock-area.png", plot = p1, width = 10.2, height = 5.3, bg = "white", dpi = 300)
 ```
 
+## Bar chart by entity
+
+```{r}
+stock_entity <- stock %>%
+  janitor::clean_names() %>%
+  pivot_longer(starts_with("share"), names_to = "status", values_to = "share") %>%
+  mutate(status = if_else(grepl("sustainable", status), "Biologically sustainable", "Overexploited")) %>%
+  filter(!entity == "World", year == 2017) %>%
+  mutate(entity = reorder_where(entity, share, where = grepl("^Over", status)))
+```
+
+```{r}
+labels_x <- unique(stock_entity$status)
+labels_x <- glue::glue("<span style='color: {pal}'>{labels_x}<span>")
+breaks_x <- c(100, 0)
+
+(p2 <- ggplot(stock_entity, aes(share, entity)) +
+  geom_col(aes(fill = status), alpha = .7, size = .1) +
+  ggtext::geom_richtext(aes(
+    label = scales::percent(share, scale = 1, accuracy = 1),
+    x = if_else(grepl("^Over", status), 0, 100),
+    hjust = if_else(grepl("^Over", status), 0, 1)
+  ),
+  family = "lato",
+  size = .8 * 8.8 / .pt,
+  color = "white",
+  label.colour = NA,
+  fill = NA
+  ) +
+  scale_x_continuous(
+    expand = c(0, 0),
+    breaks = seq(0, 100, 20),
+    labels = scales::percent_format(scale = 1),
+    sec.axis = dup_axis(breaks = breaks_x, labels = labels_x)
+  ) +
+  scale_fill_manual(values = pal) +
+  scale_color_manual(values = pal) +
+  theme(
+    panel.grid.major.x = element_line(size = .25),
+    panel.grid.major.y = element_blank(),
+    axis.text.x = element_text(hjust = c(0, rep(.5, 4), 1))
+  ) +
+  labs(x = NULL, y = NULL, title = title, subtitle = subtitle, caption = caption) +
+  guides(fill = "none", color = "none") +
+  coord_cartesian(clip = "off"))
+```
+
+```{r}
+ggsave("global-fish-stock-bar.png", plot = p2, width = 10.2, height = 5.3, bg = "white", dpi = 300)
+```
+
+```{r}
+(p1 +
+  facet_wrap(~"Worldwide") +
+  theme(
+    strip.placement = "outside",
+    strip.text.x = element_text(hjust = 0, margin = margin(0, 0, 2.2, 0), face = "bold"),
+  )) +
+  (p2 +
+    scale_y_discrete(position = "right", expand = c(0, 0)) +
+    facet_wrap(~"by Entity in 2017") +
+    theme(
+      strip.placement = "outside",
+      strip.text.x = element_text(hjust = 1, margin = margin(0, 0, 2.2, 0), face = "bold")
+    )) & labs(title = NULL, subtitle = NULL, caption = NULL) &
+  plot_annotation(title = title, subtitle = subtitle, caption = caption)
+```
+
+```{r}
+ggsave("global-fish-stock-patch.png", width = 10.2, height = 5.2, bg = "white", dpi = 300)
+```
