@@ -14,8 +14,6 @@ library(patchwork)
 library(showtext)
 ```
 
-## Helper
-
 ```{r reorder-where}
 reorder_where <- function(x, by, where, fun = mean, ...) {
     xx <- x[where]
@@ -25,10 +23,7 @@ reorder_where <- function(x, by, where, fun = mean, ...) {
 }
 ```
 
-## Fonts
-
 ```{r fonts}
-## Loading Google fonts (https://fonts.google.com/)
 font_add_google("Lato", "lato")
 font_add_google("Playfair Display", "playfair")
 
@@ -43,10 +38,9 @@ theme_set(
   theme_minimal(base_family = "lato") +
     theme(
       panel.grid.minor = element_blank(),
-      axis.text = element_text(size = 8.8),
+      axis.text = element_text(size = 7),
       axis.text.x = element_text(hjust = c(0, rep(.5, 4), 1)),
       axis.text.x.top = ggtext::element_markdown(
-        size = 7.4,
         margin = margin(b = 2.2, t = 8.8, unit = "pt"),
         hjust = c(1, 0)
       ),
@@ -61,24 +55,14 @@ theme_set(
 )
 ```
 
-## Annotations
-
-```{r}
+```{r annotations}
 title <- "Status of the world's fish stocks"
 subtitle <- "Fish stocks are overexploited when fish catch exceeds the maximum sustainable yield (MSY) – the rate at which fish populations can regenerate."
 caption <- "Orignal Data Source: Food and Agriculture Organization of the United Nations **\u2022** Illustration: Stefan Moog **\u2022** recreated from and inspired by ourworldindata.org<br>Note: Fish stock are subpopulations of a particular species of fish which have common parameters such as location, growth and mortality which define their population dynamics."
 ```
 
-## Read data
-
 ```{r read-data}
-# farmed <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/aquaculture-farmed-fish-production.csv")
-# captured_vs_farmed <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/capture-fisheries-vs-aquaculture.csv")
-# captured <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/capture-fishery-production.csv")
-# consumption <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/fish-and-seafood-consumption-per-capita.csv")
 stock <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/fish-stocks-within-sustainable-levels.csv")
-# fishery <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/global-fishery-catch-by-sector.csv")
-# production <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-12/seafood-and-fish-production-thousand-tonnes.csv")
 ```
 
 ```{r stock-world}
@@ -89,9 +73,7 @@ stock_world <- stock %>%
   filter(entity == "World")
 ```
 
-## Area Chart World
-
-```{r}
+```{r chart-area-world}
 breaks_x <- c(1974, seq(1980, 2010, 10), 2017)
 pal <- c("#4c6a9c", "#800517")
 
@@ -120,7 +102,7 @@ breaks_y <- filter(stock_world, year == max(year)) %>%
     panel.grid.major.y = element_line(size = .25),
     panel.grid.major.x = element_blank(),
     axis.text.x = element_text(hjust = c(0, rep(.5, length(breaks_x) - 2), 1)),
-    axis.text.y.right = ggtext::element_markdown(size = 7.4, hjust = 0)
+    axis.text.y.right = ggtext::element_markdown(hjust = 0)
   ) +
   labs(x = NULL, y = NULL, title = title, subtitle = subtitle, caption = caption) +
   guides(fill = "none", color = "none") +
@@ -130,9 +112,7 @@ breaks_y <- filter(stock_world, year == max(year)) %>%
 ggsave("global-fish-stock-area.png", plot = p1, width = 10.2, height = 5.3, bg = "white", dpi = 300)
 ```
 
-## Bar chart by entity
-
-```{r}
+```{r stock-entity}
 stock_entity <- stock %>%
   janitor::clean_names() %>%
   pivot_longer(starts_with("share"), names_to = "status", values_to = "share") %>%
@@ -141,7 +121,7 @@ stock_entity <- stock %>%
   mutate(entity = reorder_where(entity, share, where = grepl("^Over", status)))
 ```
 
-```{r}
+```{r chart-entity-bar}
 labels_x <- unique(stock_entity$status)
 labels_x <- glue::glue("<span style='color: {pal}'>{labels_x}<span>")
 breaks_x <- c(100, 0)
@@ -187,13 +167,15 @@ ggsave("global-fish-stock-bar.png", plot = p2, width = 10.2, height = 5.3, bg = 
   theme(
     strip.placement = "outside",
     strip.text.x = element_text(hjust = 0, margin = margin(0, 0, 2.2, 0), face = "bold"),
+    plot.margin = margin(r = 40)
   )) +
   (p2 +
     scale_y_discrete(position = "right", expand = c(0, 0)) +
     facet_wrap(~"by Entity in 2017") +
     theme(
       strip.placement = "outside",
-      strip.text.x = element_text(hjust = 1, margin = margin(0, 0, 2.2, 0), face = "bold")
+      strip.text.x = element_text(hjust = 1, margin = margin(0, 0, 2.2, 0), face = "bold"),
+      plot.margin = margin(l = 40)
     )) & labs(title = NULL, subtitle = NULL, caption = NULL) &
   plot_annotation(title = title, subtitle = subtitle, caption = caption)
 ```
