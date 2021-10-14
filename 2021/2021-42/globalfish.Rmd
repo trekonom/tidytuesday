@@ -166,7 +166,7 @@ ggsave("global-fish-stock-bar.png", plot = p2, width = 10.2, height = 5.3, bg = 
   facet_wrap(~"Worldwide") +
   theme(
     strip.placement = "outside",
-    strip.text.x = element_text(hjust = 0, margin = margin(0, 0, 2.2, 0), face = "bold"),
+    strip.text.x = element_text(hjust = 0, margin = margin(8.8, 0, 1.1, 0), face = "bold"),
     plot.margin = margin(r = 40)
   )) +
   (p2 +
@@ -174,7 +174,7 @@ ggsave("global-fish-stock-bar.png", plot = p2, width = 10.2, height = 5.3, bg = 
     facet_wrap(~"by Entity in 2017") +
     theme(
       strip.placement = "outside",
-      strip.text.x = element_text(hjust = 1, margin = margin(0, 0, 2.2, 0), face = "bold"),
+      strip.text.x = element_text(hjust = 1, margin = margin(8.8, 0, 1.1, 0), face = "bold"),
       plot.margin = margin(l = 40)
     )) & labs(title = NULL, subtitle = NULL, caption = NULL) &
   plot_annotation(title = title, subtitle = subtitle, caption = caption)
